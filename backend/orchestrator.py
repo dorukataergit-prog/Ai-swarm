@@ -1,0 +1,127 @@
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from backend.config import BENCHMARKS_DIR, TASKS_DIR
+
+TASK_STATUSES = [
+    "PENDING",
+    "ASSIGNED",
+    "RUNNING",
+    "BLOCKED",
+    "FAILED",
+    "COMPLETED",
+]
+
+
+class TaskStore:
+    def __init__(self, path: Optional[Path] = None):
+        self.path = path or TASKS_DIR / "tasks.json"
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        if not self.path.exists():
+            self.path.write_text("[]", encoding="utf-8")
+
+    def load(self) -> List[Dict[str, Any]]:
+        text = self.path.read_text(encoding="utf-8") or "[]"
+        try:
+            tasks = json.loads(text)
+            return tasks if isinstance(tasks, list) else []
+        except json.JSONDecodeError:
+            return []
+
+    def save(self, tasks: List[Dict[str, Any]]) -> None:
+        self.path.write_text(json.dumps(tasks, indent=2), encoding="utf-8")
+
+    def create_task(self, title: str, description: str, assigned_agent: str, priority: str = "normal", dependencies: Optional[List[str]] = None, result: str = "") -> Dict[str, Any]:
+        tasks = self.load()
+        task = {
+            "id": f"task-{len(tasks) + 1:04d}",
+            "title": title,
+            "description": description,
+            "assigned_agent": assigned_agent,
+            "priority": priority,
+            "status": "PENDING",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "dependencies": dependencies or [],
+            "result": result,
+            "errors": [],
+        }
+        tasks.append(task)
+        self.save(tasks)
+        return task
+
+    def list_tasks(self) -> List[Dict[str, Any]]:
+        return self.load()
+
+    def update_task(self, task_id: str, **updates) -> Dict[str, Any]:
+        tasks = self.load()
+        for task in tasks:
+            if task["id"] == task_id:
+                task.update(updates)
+                task["updated_at"] = datetime.now(timezone.utc).isoformat()
+                self.save(tasks)
+                return task
+        raise ValueError(f"Task {task_id} not found")
+
+    def mark_failed(self, task_id: str, error: str) -> Dict[str, Any]:
+        tasks = self.load()
+        for task in tasks:
+            if task["id"] == task_id:
+                task["status"] = "FAILED"
+                task["errors"] = task.get("errors", []) + [error]
+                task["updated_at"] = datetime.now(timezone.utc).isoformat()
+                self.save(tasks)
+                return task
+        raise ValueError(f"Task {task_id} not found")
+
+
+class BenchmarkStore:
+    def __init__(self, path: Optional[Path] = None):
+        self.path = path or BENCHMARKS_DIR / "benchmarks.json"
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    def append(self, record: Dict[str, Any]):
+        if self.path.exists():
+            try:
+                items = json.loads(self.path.read_text(encoding="utf-8") or "[]")
+            except json.JSONDecodeError:
+                items = []
+        else:
+            items = []
+        items.append(record)
+        self.path.write_text(json.dumps(items, indent=2), encoding="utf-8")
+
+
+class Orchestrator:
+    def __init__(self):
+        self.tasks = TaskStore()
+        self.benchmarks = BenchmarkStore()
+
+    def seed_demo_tasks(self):
+        existing = self.tasks.list_tasks()
+        if existing:
+            return existing
+        definitions = [
+            ("Set up Godot project", "Create the Godot 4 project skeleton and structure.", "programmer"),
+            ("Design arena", "Create the football arena and main gameplay space.", "level_designer"),
+            ("Create car assets", "Generate the car and football aesthetics.", "asset_designer"),
+            ("Implement car controller", "Create controller logic for movement and gameplay.", "programmer"),
+            ("Run validation", "Execute Godot headless checks and report errors.", "tester"),
+            ("Review and improve", "Analyze performance and propose improvements.", "improver"),
+        ]
+        created = []
+        for title, description, agent in definitions:
+            created.append(self.tasks.create_task(title, description, agent))
+        return created
+
+    def record_benchmark(self, name: str, value: float, detail: str = "") -> Dict[str, Any]:
+        record = {
+            "name": name,
+            "value": value,
+            "detail": detail,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        self.benchmarks.append(record)
+        return record
