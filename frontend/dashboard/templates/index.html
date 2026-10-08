@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Doruk Village</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="panel">
+        <div class="panel-header"><h2>Agents</h2></div>
+        <div id="agent-list" class="agent-list"></div>
+      </aside>
+
+      <main class="panel central-panel">
+        <div class="panel-header"><h2>Live Village Conversation</h2></div>
+        <div id="conversation" class="conversation"></div>
+      </main>
+
+      <aside class="panel sidebar-panel">
+        <div class="panel-header"><h2>Current Task</h2></div>
+        <div id="task-current" class="task-box"></div>
+        <div class="section"><h3>Tool Activity</h3><ul id="tool-activity"></ul></div>
+        <div class="section"><h3>Errors</h3><ul id="errors"></ul></div>
+        <div class="section"><h3>Test Results</h3><ul id="test-results"></ul></div>
+      </aside>
+
+      <footer class="panel bottom-panel">
+        <div class="panel-header"><h2>Moderator Command Box</h2></div>
+        <div class="command-box">
+          <input id="moderator-command" type="text" placeholder="Type a moderator command..." />
+          <button id="send-command">Send</button>
+        </div>
+        <div id="event-log" class="event-log"></div>
+      </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
